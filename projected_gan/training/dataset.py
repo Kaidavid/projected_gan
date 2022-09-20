@@ -16,6 +16,7 @@ import json
 import torch
 import dnnlib
 import copy
+import rgb2rgba
 
 try:
     import pyspng
@@ -100,6 +101,7 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         image = self._load_raw_image(self._raw_idx[idx])
+        image = rgb2rgba.padding_(image, list(self.image_shape)[1:])        # added
         assert isinstance(image, np.ndarray)
         assert list(image.shape) == self.image_shape
         assert image.dtype == np.uint8
@@ -170,12 +172,13 @@ class Dataset(torch.utils.data.Dataset):
 class ImageFolderDataset(Dataset):
     def __init__(self,
         path,                   # Path to directory or zip.
+        alpha,                  # The alpha value in rgba
         resolution      = None, # Ensure specific resolution, None = highest available.
         **super_kwargs,         # Additional arguments for the Dataset base class.
     ):
         self._path = path
         self._zipfile = None
-
+        self.alpha = alpha
         if os.path.isdir(self._path):
             self._type = 'dir'
             self._all_fnames = {os.path.relpath(os.path.join(root, fname), start=self._path) for root, _dirs, files in os.walk(self._path) for fname in files}
@@ -191,7 +194,7 @@ class ImageFolderDataset(Dataset):
             raise IOError('No image files found in the specified path')
 
         name = os.path.splitext(os.path.basename(self._path))[0]
-        raw_shape = [len(self._image_fnames)] + list(self._load_raw_image(0).shape)
+        raw_shape = [len(self._image_fnames)] + list(self._load_raw_image(0).shape) #[500 pics] + [3, 64, 64]
         if resolution is not None and (raw_shape[2] != resolution or raw_shape[3] != resolution):
             raise IOError('Image files do not match the specified resolution')
         super().__init__(name=name, raw_shape=raw_shape, **super_kwargs)
@@ -230,8 +233,11 @@ class ImageFolderDataset(Dataset):
                 image = pyspng.load(f.read())
             else:
                 image = np.array(PIL.Image.open(f))
+                
         if image.ndim == 2:
             image = image[:, :, np.newaxis] # HW => HWC
+        else:
+            image = rgb2rgba.rgb2rgba_(im=image, alpha=self.alpha)       # added
         image = image.transpose(2, 0, 1) # HWC => CHW
         return image
 

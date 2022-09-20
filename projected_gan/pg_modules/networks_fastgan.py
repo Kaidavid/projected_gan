@@ -3,6 +3,7 @@
 # modified by Axel Sauer for "Projected GANs Converge Faster"
 #
 import torch.nn as nn
+import math
 from pg_modules.blocks import (InitLayer, UpBlockBig, UpBlockBigCond, UpBlockSmall, UpBlockSmallCond, SEBlock, conv2d)
 
 
@@ -19,18 +20,22 @@ class DummyMapping(nn.Module):
 
 
 class FastganSynthesis(nn.Module):
-    def __init__(self, ngf=128, z_dim=256, nc=3, img_resolution=256, lite=False):
+    def __init__(self, ngf=128, z_dim=256, nc=4, img_resolution=256, lite=False):
         super().__init__()
         self.img_resolution = img_resolution
         self.z_dim = z_dim
 
         # channel multiplier
+
+        # nfc_multi = {2: 16, 4:16, 8:8, 16:4, 32:2, 64:2, 128:1, 256:0.5,
+        #              512:0.25, 1024:0.125}
+
         nfc_multi = {2: 16, 4:16, 8:8, 16:4, 32:2, 64:2, 128:1, 256:0.5,
-                     512:0.25, 1024:0.125}
+                     512:0.25, 1024:0.125, 2048:0.125}      # added
+        
         nfc = {}
         for k, v in nfc_multi.items():
             nfc[k] = int(v*ngf)
-
         # layers
         self.init = InitLayer(z_dim, channel=nfc[2], sz=4)
 
@@ -47,7 +52,8 @@ class FastganSynthesis(nn.Module):
         self.se_128 = SEBlock(nfc[8], nfc[128])
         self.se_256 = SEBlock(nfc[16], nfc[256])
 
-        self.to_big = conv2d(nfc[img_resolution], nc, 3, 1, 1, bias=True)
+        self.to_big = conv2d(nfc[pow(2, math.ceil(math.log(img_resolution)/math.log(2)))], nc, 3, 1, 1, bias=True)      # added
+        # self.to_big = conv2d(nfc[img_resolution], nc, 3, 1, 1, bias=True)
 
         if img_resolution > 256:
             self.feat_512 = UpBlock(nfc[256], nfc[512])
@@ -58,11 +64,10 @@ class FastganSynthesis(nn.Module):
     def forward(self, input, c, **kwargs):
         # map noise to hypersphere as in "Progressive Growing of GANS"
         input = normalize_second_moment(input[:, 0])
-
         feat_4 = self.init(input)
         feat_8 = self.feat_8(feat_4)
         feat_16 = self.feat_16(feat_8)
-        feat_32 = self.feat_32(feat_16)
+        feat_32 = self.feat_32(feat_16) #512 -> 256
         feat_64 = self.se_64(feat_4, self.feat_64(feat_32))
         feat_128 = self.se_128(feat_8,  self.feat_128(feat_64))
 
@@ -82,7 +87,7 @@ class FastganSynthesis(nn.Module):
 
 
 class FastganSynthesisCond(nn.Module):
-    def __init__(self, ngf=64, z_dim=256, nc=3, img_resolution=256, num_classes=1000, lite=False):
+    def __init__(self, ngf=64, z_dim=256, nc=4, img_resolution=256, num_classes=1000, lite=False):
         super().__init__()
 
         self.z_dim = z_dim
@@ -154,7 +159,7 @@ class Generator(nn.Module):
         c_dim=0,
         w_dim=0,
         img_resolution=256,
-        img_channels=3,
+        img_channels=4,
         ngf=128,
         cond=0,
         mapping_kwargs={},

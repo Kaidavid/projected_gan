@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
+import rgb2rgba
 import timm
 from pg_modules.blocks import FeatureFusionBlock
-
 
 def _make_scratch_ccm(scratch, in_channels, cout, expand=False):
     # shapes
@@ -111,6 +111,7 @@ class F_RandomProj(nn.Module):
 
     def forward(self, x):
         # predict feature maps
+        x = rgb2rgba.rgba2rgb_(x)        # added
         out0 = self.pretrained.layer0(x)
         out1 = self.pretrained.layer1(out0)
         out2 = self.pretrained.layer2(out1)
