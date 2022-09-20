@@ -194,7 +194,7 @@ class ImageFolderDataset(Dataset):
             raise IOError('No image files found in the specified path')
 
         name = os.path.splitext(os.path.basename(self._path))[0]
-        raw_shape = [len(self._image_fnames)] + list(self._load_raw_image(0).shape) #[500 pics] + [3, 64, 64]
+        raw_shape = [len(self._image_fnames)] + list(self._load_raw_image(0).shape)
         if resolution is not None and (raw_shape[2] != resolution or raw_shape[3] != resolution):
             raise IOError('Image files do not match the specified resolution')
         super().__init__(name=name, raw_shape=raw_shape, **super_kwargs)
@@ -237,7 +237,9 @@ class ImageFolderDataset(Dataset):
         if image.ndim == 2:
             image = image[:, :, np.newaxis] # HW => HWC
         else:
-            image = rgb2rgba.rgb2rgba_(im=image, alpha=self.alpha)       # added
+            image = rgb2rgba.rgb2rgba_(im=image, alpha=self.alpha)      # added
+            rgb2rgba.save_rgba_(self._path, image, str(raw_idx))        # added              
+    
         image = image.transpose(2, 0, 1) # HWC => CHW
         return image
 
