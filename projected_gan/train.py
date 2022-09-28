@@ -78,7 +78,7 @@ def launch_training(c, desc, outdir, dry_run):
     print(f'Dataset path:        {c.training_set_kwargs.path}')
     print(f'Dataset size:        {c.training_set_kwargs.max_size} images')
     print(f'Dataset resolution:  {c.training_set_kwargs.resolution}')
-    print(f'Dataset alpha:       {c.training_set_kwargs.alpha}')
+    print(f'Dataset alpha:       {c.training_set_kwargs.alpha}')            # added
     print(f'Dataset labels:      {c.training_set_kwargs.use_labels}')
     print(f'Dataset x-flips:     {c.training_set_kwargs.xflip}')
     print()
@@ -136,8 +136,8 @@ def parse_comma_separated_list(s):
 # Optional features.
 @click.option('--cond',         help='Train conditional model', metavar='BOOL',                 type=bool, default=False, show_default=True)
 @click.option('--mirror',       help='Enable dataset x-flips', metavar='BOOL',                  type=bool, default=False, show_default=True)
-@click.option('--alpha',        help='Alpha of RGBA channel', metavar='INT',                    type=click.IntRange(min=0, max=255), default=255, show_default=True)
-@click.option('--max_size',     help='Maximum number of images', metavar='INT',                 type=click.IntRange(min=0), default=None, show_default=True)
+@click.option('--alpha',        help='Alpha of RGBA channel', metavar='INT',                    type=click.IntRange(min=0, max=255), default=255, show_default=True)    # added
+@click.option('--max_size',     help='Maximum number of images', metavar='INT',                 type=click.IntRange(min=0), default=None, show_default=True)            # added
 @click.option('--resume',       help='Resume from given network pickle', metavar='[PATH|URL]',  type=str)
 
 # Misc hyperparameters.
@@ -177,8 +177,8 @@ def main(**kwargs):
         raise click.ClickException('--cond=True requires labels specified in dataset.json')
     c.training_set_kwargs.use_labels = opts.cond
     c.training_set_kwargs.xflip = opts.mirror
-    c.training_set_kwargs.alpha = opts.alpha
-    c.training_set_kwargs.max_size = opts.max_size
+    c.training_set_kwargs.alpha = opts.alpha            # added
+    c.training_set_kwargs.max_size = opts.max_size      # added
 
 
     # Hyperparameters & settings.
